@@ -18,6 +18,8 @@ help:
 	echo "        Create a virtualenv and install project dependencies"
 	echo "    train"
 	echo "        Launch a model training"
+	echo "    predict"
+	echo "        Generate tournament predictions"
 	echo "    tensorboard"
 	echo "        Launch tensorboard UI"
 	echo "    test"
@@ -33,6 +35,11 @@ train:
 	clear &&\
 	echo "$$HEADER" &&\
 	poetry run python staker/train.py
+
+predict:
+	clear &&\
+	echo "$$HEADER" &&\
+	poetry run python staker/predict.py
 
 tensorboard:
 	clear &&\

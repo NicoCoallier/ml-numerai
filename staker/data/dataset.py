@@ -80,10 +80,13 @@ class NumerAIDataset:
             unzip=True, dest_path="./data/", dest_filename="current_round"
         )
 
-    def load(self) -> pd.DataFrame:
+    def load(self, training: bool) -> pd.DataFrame:
         """Load the dataset in memory"""
         # TO DO: Avoid hardcoding
-        data = pd.read_csv("./data/current_round/numerai_training_data.csv")
+        if training:
+            data = pd.read_csv("./data/current_round/numerai_training_data.csv")
+        else:
+            data = pd.read_csv("./data/current_round/numerai_tournament_data.csv")
         return data[self.to_keep]
 
     def whiten(self, data: pd.DataFrame, num_components: int = 80) -> pd.DataFrame:
@@ -141,14 +144,14 @@ class NumerAIDataset:
         return tf.data.Dataset.from_tensor_slices(data.to_dict("list"))
 
     def preprare_data(
-        self, data: tf.data.Dataset, training: bool = True
+        self, data: tf.data.Dataset, shuffle: bool = True
     ) -> tf.data.Dataset:
         """Prepare dataset with batching and shuffling...
 
         :param data: The data to prepare
         :type data: tf.Dataset
-        :param training: Training flag
-        :type training: bool
+        :param shuffle: shuffle flag
+        :type shuffle: bool
 
         :return: Batch and shuffle data
         :rtype: tf.Dataset
@@ -159,39 +162,42 @@ class NumerAIDataset:
             return data, y
 
         data = data.map(split_label_features, tf.data.AUTOTUNE)
-        if training:
+        if shuffle:
             data = data.cache()
             data = data.shuffle(self.config.DATA_CONFIG.batch_size * SHUFFLE_FACTOR)
         data = data.batch(self.config.DATA_CONFIG.batch_size, drop_remainder=False)
         return data
 
-    def __call__(
-        self,
-    ):
+    def __call__(self, training: bool):
         """Download, split and create the TF.Dataset ready for training"""
         # 1. Download
         print("::: Downloading data...")
         self.download()
         # 2. Load
         print("::: Loading data...")
-        data = self.load()
+        data = self.load(training)
         # 3. Whiten or not
         if self.config.DATA_CONFIG.whiten.apply:
             print("::: Whitening data...")
             data = self.whiten(data, self.config.DATA_CONFIG.whiten.n_components)
-        # 4. Split dataset
-        print("::: Split data...")
-        train, val = self.split_dataset(data)
-        # 5. Calcualte vocab and stats
-        print("::: Build stats and vocab...")
-        vocab = self.__build_vocab_and_stats(train)
-        # 6. Transform to tf dataset
-        print("::: Transforming from pandas to tensorflow...")
-        train_dataset = self.pandas_to_tensorflow(train)
-        val_dataset = self.pandas_to_tensorflow(val)
-        # 7. Prepare tf dataset for training (batch, shuffle...)
-        print("::: Prepare data for training...")
-        train_dataset = self.preprare_data(train_dataset, True)
-        val_dataset = self.preprare_data(val_dataset, False)
 
-        return train_dataset, val_dataset, vocab
+        if training:
+            # 4. Split dataset
+            print("::: Split data...")
+            train, val = self.split_dataset(data)
+            # 5. Calcualte vocab and stats
+            print("::: Build stats and vocab...")
+            vocab = self.__build_vocab_and_stats(train)
+            # 6. Transform to tf dataset
+            print("::: Transforming from pandas to tensorflow...")
+            train_dataset = self.pandas_to_tensorflow(train)
+            val_dataset = self.pandas_to_tensorflow(val)
+            # 7. Prepare tf dataset for training (batch, shuffle...)
+            print("::: Prepare data for training...")
+            train_dataset = self.preprare_data(train_dataset, shuffle=True)
+            val_dataset = self.preprare_data(val_dataset, shuffle=False)
+            return train_dataset, val_dataset, vocab
+        else:
+            dataset = self.pandas_to_tensorflow(data)
+            dataset = self.preprare_data(dataset, shuffle=False)
+            return dataset, data

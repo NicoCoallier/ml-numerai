@@ -46,12 +46,12 @@ class NumerAIPredictor(BaseSettings):
     TYPE = "tabnet"
     model_type_config = get_model_type_config(TYPE)
     DATA_CONFIG = DataConfig(
-        type=TYPE, whiten=WhitenConfig(apply=True, n_components=180), batch_size=1024
-    )
+        type=TYPE, whiten=WhitenConfig(apply=False, n_components=80), batch_size=1024
+    )  # WARNINGS: Whitening is currently not correct, need to fix the fit on train only and saving
     MODEL_CONFIG = ModelConfig(
         type=model_type_config,
         max_epochs=500,
-        learning_rate=3e-4,
+        learning_rate=1e-4,
         da=DomainAdaptation(active=False, target="era"),
         # WARNING: Changing the domain adaptation target require change in the feature set
         # TO DO: Validator that automatically check assumptions are meet

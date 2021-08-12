@@ -1,8 +1,10 @@
+from typing import Dict
 from typing import List
 from typing import Tuple
 
 import tensorflow as tf
 
+from pydantic import BaseSettings
 from staker.models.base import TFInputBuilder
 from staker.models.layers import AttentiveTransformer
 from staker.models.layers import FeatureTransformer
@@ -13,8 +15,9 @@ class TabNet(TFInputBuilder):
 
     def __init__(
         self,
-        config,
-        vocab,
+        config: BaseSettings,
+        vocab: Dict = None,
+        pretrained: bool = False,
     ):
         super(TabNet, self).__init__()
         self.tabnet_config = config.MODEL_CONFIG.type
@@ -35,49 +38,53 @@ class TabNet(TFInputBuilder):
         self.config = config
         # Vocab for preprocessing
         self.vocab = vocab
-        # Counts the feature layer dimension
-        self.num_features = len(vocab.keys())
-        for name, value in config.FEATURES_CONFIG.__dict__.items():
-            if value.__class__.__name__ == "CategFeature" and value.include:
-                self.num_features = self.num_features + value.embedding_size - 1
-        # Build input and preprocessing layers
-        self.build_input_layers()
-        self.concat = tf.keras.layers.Concatenate()
-        self.bn = tf.keras.layers.BatchNormalization(
-            momentum=self.tabnet_config.bn_momentum,
-            epsilon=self.tabnet_config.bn_epsilon,
-        )
-        # Argument for sublayers
-        kargs = {
-            "feature_dim": self.tabnet_config.feature_dim
-            + self.tabnet_config.output_dim,
-            "n_total": self.tabnet_config.n_total,
-            "n_shared": self.tabnet_config.n_shared,
-            "bn_momentum": self.tabnet_config.bn_momentum,
-            "bn_virtual_divider": self.tabnet_config.bn_virtual_divider,
-        }
+        if not pretrained:
+            # Counts the feature layer dimension
+            self.num_features = len(vocab.keys())
+            for name, value in config.FEATURES_CONFIG.__dict__.items():
+                if value.__class__.__name__ == "CategFeature" and value.include:
+                    self.num_features = self.num_features + value.embedding_size - 1
+            # Build input and preprocessing layers
+            self.build_input_layers()
+            self.concat = tf.keras.layers.Concatenate()
+            self.bn = tf.keras.layers.BatchNormalization(
+                momentum=self.tabnet_config.bn_momentum,
+                epsilon=self.tabnet_config.bn_epsilon,
+            )
+            # Argument for sublayers
+            kargs = {
+                "feature_dim": self.tabnet_config.feature_dim
+                + self.tabnet_config.output_dim,
+                "n_total": self.tabnet_config.n_total,
+                "n_shared": self.tabnet_config.n_shared,
+                "bn_momentum": self.tabnet_config.bn_momentum,
+                "bn_virtual_divider": self.tabnet_config.bn_virtual_divider,
+            }
 
-        # first feature transformer block is built first to get the shared blocks
-        self.feature_transforms: List[FeatureTransformer] = [
-            FeatureTransformer(**kargs)
-        ]
-        self.attentive_transforms: List[AttentiveTransformer] = []
-        for i in range(self.tabnet_config.n_step):
-            self.feature_transforms.append(
-                FeatureTransformer(**kargs, fcs=self.feature_transforms[0].shared_fcs)
-            )
-            self.attentive_transforms.append(
-                AttentiveTransformer(
-                    self.num_features,
-                    self.tabnet_config.bn_momentum,
-                    self.tabnet_config.bn_virtual_divider,
+            # first feature transformer block is built first to get the shared blocks
+            self.feature_transforms: List[FeatureTransformer] = [
+                FeatureTransformer(**kargs)
+            ]
+            self.attentive_transforms: List[AttentiveTransformer] = []
+            for i in range(self.tabnet_config.n_step):
+                self.feature_transforms.append(
+                    FeatureTransformer(
+                        **kargs, fcs=self.feature_transforms[0].shared_fcs
+                    )
                 )
+                self.attentive_transforms.append(
+                    AttentiveTransformer(
+                        self.num_features,
+                        self.tabnet_config.bn_momentum,
+                        self.tabnet_config.bn_virtual_divider,
+                    )
+                )
+            # Output layer
+            self.dropout = tf.keras.layers.Dropout(0.1)
+            # Sigmoid because output is between 0 and 1
+            self.output_layer = tf.keras.layers.Dense(
+                1, activation="sigmoid", use_bias=False
             )
-        # Output layer
-        self.dropout = tf.keras.layers.Dropout(0.1)
-        self.output_layer = tf.keras.layers.Dense(
-            1, activation="sigmoid", use_bias=False
-        )
 
     def call(
         self, features: tf.Tensor, training: bool = None, alpha: float = 0.0

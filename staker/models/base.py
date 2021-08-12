@@ -1,6 +1,3 @@
-import os
-import pickle
-
 from typing import Dict
 from typing import List
 from typing import NoReturn
@@ -119,18 +116,3 @@ class TFInputBuilder(tf.keras.models.Model):
 
     def get_config(self):
         return self.configs
-
-    def save_to_directory(self, path_to_folder: Text):
-        self.save_weights(os.path.join(path_to_folder, "ckpt"), overwrite=True)
-        with open(os.path.join(path_to_folder, "configs.pickle"), "wb") as f:
-            pickle.dump(self.configs, f)
-
-    @classmethod
-    def load_from_directory(cls, path_to_folder: Text):
-        with open(os.path.join(path_to_folder, "configs.pickle"), "rb") as f:
-            configs = pickle.load(f)
-        model: tf.keras.Model = cls(**configs)
-        model.build((None, configs["num_features"]))
-        load_status = model.load_weights(os.path.join(path_to_folder, "ckpt"))
-        load_status.expect_partial()
-        return model
