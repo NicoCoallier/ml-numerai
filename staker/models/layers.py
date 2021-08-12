@@ -1,6 +1,9 @@
-import tensorflow as tf
-from tensorflow_addons.activations import sparsemax
 from typing import List
+
+import tensorflow as tf
+
+from tensorflow_addons.activations import sparsemax
+
 
 def glu(x, n_units=None):
     """Generalized linear unit nonlinear activation."""
@@ -8,9 +11,10 @@ def glu(x, n_units=None):
 
 
 class GhostBatchNormalization(tf.keras.Model):
-    """ GhostBatchNormalization
+    """GhostBatchNormalization
     modified from https://github.com/ostamand/tensorflow-tabnet
     """
+
     def __init__(
         self, virtual_divider: int = 1, momentum: float = 0.9, epsilon: float = 1e-5
     ):
@@ -35,9 +39,10 @@ class GhostBatchNormalization(tf.keras.Model):
 
 
 class BatchNormInferenceWeighting(tf.keras.layers.Layer):
-    """ BatchNormInferenceWeighting
+    """BatchNormInferenceWeighting
     modified from https://github.com/ostamand/tensorflow-tabnet
     """
+
     def __init__(self, momentum: float = 0.9, epsilon: float = None):
         super(BatchNormInferenceWeighting, self).__init__()
         self.momentum = momentum
@@ -47,17 +52,21 @@ class BatchNormInferenceWeighting(tf.keras.layers.Layer):
         channels = input_shape[-1]
 
         self.gamma = tf.Variable(
-            initial_value=tf.ones((channels,), tf.float32), trainable=True,
+            initial_value=tf.ones((channels,), tf.float32),
+            trainable=True,
         )
         self.beta = tf.Variable(
-            initial_value=tf.zeros((channels,), tf.float32), trainable=True,
+            initial_value=tf.zeros((channels,), tf.float32),
+            trainable=True,
         )
 
         self.moving_mean = tf.Variable(
-            initial_value=tf.zeros((channels,), tf.float32), trainable=False,
+            initial_value=tf.zeros((channels,), tf.float32),
+            trainable=False,
         )
         self.moving_mean_of_squares = tf.Variable(
-            initial_value=tf.zeros((channels,), tf.float32), trainable=False,
+            initial_value=tf.zeros((channels,), tf.float32),
+            trainable=False,
         )
 
     def __update_moving(self, var, value):
@@ -86,10 +95,12 @@ class BatchNormInferenceWeighting(tf.keras.layers.Layer):
 
         return x
 
+
 class FeatureBlock(tf.keras.Model):
-    """ FeatureBlock
+    """FeatureBlock
     modified from https://github.com/ostamand/tensorflow-tabnet
     """
+
     def __init__(
         self,
         feature_dim: int,
@@ -100,7 +111,7 @@ class FeatureBlock(tf.keras.Model):
         epsilon: float = 1e-5,
     ):
         super(FeatureBlock, self).__init__()
-        self.apply_gpu = apply_glu
+        self.apply_glu = apply_glu
         self.feature_dim = feature_dim
         units = feature_dim * 2 if apply_glu else feature_dim
 
@@ -112,15 +123,16 @@ class FeatureBlock(tf.keras.Model):
     def call(self, x, training: bool = None, alpha: float = 0.0):
         x = self.fc(x)
         x = self.bn(x, training=training, alpha=alpha)
-        if self.apply_gpu:
+        if self.apply_glu:
             return glu(x, self.feature_dim)
         return x
 
 
 class AttentiveTransformer(tf.keras.Model):
-    """ AttentiveTransformer
+    """AttentiveTransformer
     modified from https://github.com/ostamand/tensorflow-tabnet
     """
+
     def __init__(self, feature_dim: int, bn_momentum: float, bn_virtual_divider: int):
         super(AttentiveTransformer, self).__init__()
         self.block = FeatureBlock(
@@ -130,16 +142,17 @@ class AttentiveTransformer(tf.keras.Model):
             apply_glu=False,
         )
 
-    def call(self, inputs , training=None, alpha: float = 0.0):
+    def call(self, inputs, training=None, alpha: float = 0.0):
         x, prior_scales = inputs
         x = self.block(x, training=training, alpha=alpha)
         return sparsemax(x * prior_scales)
 
 
 class FeatureTransformer(tf.keras.Model):
-    """ FeatureTransformer
+    """FeatureTransformer
     modified from https://github.com/ostamand/tensorflow-tabnet
     """
+
     def __init__(
         self,
         feature_dim: int,

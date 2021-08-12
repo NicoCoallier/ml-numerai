@@ -15,6 +15,7 @@ checkpoint
 *.pickle
 *pb
 variables.*
+predictions.csv
 
 # Distribution / packaging
 logs/

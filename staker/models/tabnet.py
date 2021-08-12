@@ -40,7 +40,7 @@ class TabNet(TFInputBuilder):
         self.vocab = vocab
         if not pretrained:
             # Counts the feature layer dimension
-            self.num_features = len(vocab.keys())
+            self.num_features = len(vocab.keys()) - 1  # For ID
             for name, value in config.FEATURES_CONFIG.__dict__.items():
                 if value.__class__.__name__ == "CategFeature" and value.include:
                     self.num_features = self.num_features + value.embedding_size - 1
@@ -113,7 +113,7 @@ class TabNet(TFInputBuilder):
                 out = tf.keras.activations.relu(x[:, : self.tabnet_config.output_dim])
                 out_agg += out
 
-            # no need to build the features mask for the last step
+            # No need to build the features mask for the last step
             if step_i < self.tabnet_config.n_step:
                 x_for_mask = x[:, self.tabnet_config.output_dim :]
 
@@ -121,12 +121,12 @@ class TabNet(TFInputBuilder):
                     inputs=[x_for_mask, prior_scales], training=training, alpha=alpha
                 )
 
-                # relaxation factor of 1 forces the feature to be only used once.
+                # Relaxation factor of 1 forces the feature to be only used once.
                 prior_scales *= self.tabnet_config.relaxation_factor - mask_values
 
                 masked_features = tf.multiply(mask_values, features)
 
-                # entropy is used to penalize the amount of sparsity in feature selection
+                # Entropy is used to penalize the amount of sparsity in feature selection
                 # Validate not missing a + here
                 total_entropy = tf.reduce_mean(
                     tf.reduce_sum(

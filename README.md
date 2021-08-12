@@ -29,7 +29,7 @@ You can generated predictions manually by running the command `make predict`. Yo
 
 ### Test new model/idea
 
-Create a new model on numerAI on the model [page](https://numer.ai/models). Once the model is create, create a new feature branch called `abtest/modelname`. Once the branch is done make a draft PR where you describe the change you've implemented and link the model page on Numerai.
+Create a new model on numerAI on the model [page](https://numer.ai/models). Once the model is create, create a new feature branch called `abtest/modelname`. Once the branch is done make a draft PR where you describe the change you've implemented and link the model page on NumerAI.
 
 Once the model has been running for two era (at minimum). Compare performance of the models. If the new model outperform the one in production. Update the production model by merging your PR (after review) and deploying in production.
 
@@ -39,7 +39,11 @@ Once the model has been running for two era (at minimum). Compare performance of
 
 ### TO DO
 
-- Fix PCA Whiten , to save pca along the model and avoid using validation data in the fit
-- Improve model saving (include preprocess/config)
 - Domain adaptation on era
 - Replicate numerai evaluation locally
+- Improve model saving (one artefact instead of two)
+- CLI and production steps
+- Contribution
+- Release procedure
+- Test [deep neural forest](https://keras.io/examples/structured_data/deep_neural_decision_forests/)
+- Implement null imputation [self-supervised](https://github.com/dreamquark-ai/tabnet/blob/develop/pytorch_tabnet/pretraining.py)

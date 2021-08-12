@@ -1,3 +1,5 @@
+import logging
+
 from typing import NoReturn
 
 from pydantic import BaseSettings
@@ -15,16 +17,20 @@ def main(config: BaseSettings) -> NoReturn:
     :type config: BaseSettings
     """
     # 1. Load model
+    logging.info("::: Loading model")
     model = load_model(
         "./models/",
         custom_objects={"coeff_determination": coeff_determination, "rmse": rmse},
     )
     # 2. Load tournament dataset
+    logging.info("::: Loading data")
     dataset_getter = NumerAIDataset.load("./models/dataset.pickle")
     dataset, df = dataset_getter(training=False)
     # 3. Predict
+    logging.info("::: Predict")
     df["prediction"] = model.predict(dataset)
     # 4. Save predictions
+    logging.info("::: Saving predictions")
     df[["id", "prediction"]].to_csv("./predictions.csv", index=False)
 
 
