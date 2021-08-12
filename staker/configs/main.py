@@ -50,7 +50,7 @@ class NumerAIPredictor(BaseSettings):
     )
     MODEL_CONFIG = ModelConfig(
         type=model_type_config,
-        max_epochs=1,
+        max_epochs=500,
         learning_rate=1e-4,
         da=DomainAdaptation(active=False, target="era"),
         # WARNING: Changing the domain adaptation target require change in the feature set
