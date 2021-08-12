@@ -1,4 +1,6 @@
+import logging
 import os
+import pickle
 
 from typing import Dict
 from typing import List
@@ -25,9 +27,10 @@ class NumerAIDataset:
         self.config = config
         self.__get_env_var()
         self.napi = numerapi.NumerAPI(self.api_id, self.api_secret)
-        self.categ_features = []
-        self.num_features = []
-        self.target_features = []
+        self.categ_features: List[Text] = []
+        self.num_features: List[Text] = []
+        self.target_features: List[Text] = []
+        self.new_num_features: List[Text] = []
         self.__get_features()
 
     def __get_features(self) -> NoReturn:
@@ -64,7 +67,7 @@ class NumerAIDataset:
         for name in self.to_keep:
             if name in self.categ_features:
                 vocabs[name] = list(data[name].unique())
-            elif name in self.num_features:
+            elif name in self.num_features or name in self.new_num_features:
                 vocabs[name] = {
                     "mean": data[name].mean(),
                     "var": data[name].var(),
@@ -80,16 +83,18 @@ class NumerAIDataset:
             unzip=True, dest_path="./data/", dest_filename="current_round"
         )
 
-    def load(self, training: bool) -> pd.DataFrame:
+    def load_data(self, training: bool) -> pd.DataFrame:
         """Load the dataset in memory"""
         # TO DO: Avoid hardcoding
         if training:
             data = pd.read_csv("./data/current_round/numerai_training_data.csv")
         else:
             data = pd.read_csv("./data/current_round/numerai_tournament_data.csv")
-        return data[self.to_keep]
+        return data
 
-    def whiten(self, data: pd.DataFrame, num_components: int = 80) -> pd.DataFrame:
+    def whiten(
+        self, data: pd.DataFrame, num_components: int = 80, training: bool = False
+    ) -> pd.DataFrame:
         """Applies data whitening
 
         :param data: Data to whiten
@@ -101,8 +106,11 @@ class NumerAIDataset:
         :rtype: pd.DataFrame
         """
         # **** TO DO: Make sure to only fit on TRAIN ****
-        pca = PCA(n_components=num_components, whiten=True)
-        pca_result = pca.fit_transform(data[self.num_features])
+        if training:
+            self.pca = PCA(n_components=num_components, whiten=True)
+            pca_result = self.pca.fit_transform(data[self.num_features])
+        else:
+            pca_result = self.pca.transform(data[self.num_features])
         # Pick transform features
         WHITE_NUM: List[Text] = []
         for i in range(num_components):
@@ -111,11 +119,12 @@ class NumerAIDataset:
             WHITE_NUM.append(name)
 
         # Overwrite NUM with WHITE_NUM
-        self.num_features = WHITE_NUM
-        self.to_keep = WHITE_NUM + self.categ_features + self.target_features
-        print(
-            "Explained variation for all components: {}".format(
-                np.sum(pca.explained_variance_ratio_)
+        if training:
+            self.new_num_features = WHITE_NUM
+            self.to_keep = WHITE_NUM + self.categ_features + self.target_features
+        logging.info(
+            "::: Explained variation for all components: {}".format(
+                np.sum(self.pca.explained_variance_ratio_)
             )
         )
         return data[self.to_keep]
@@ -168,36 +177,70 @@ class NumerAIDataset:
         data = data.batch(self.config.DATA_CONFIG.batch_size, drop_remainder=False)
         return data
 
+    def save(self, path: Text) -> NoReturn:
+        """Save dataset object
+
+        :param path: Path where to save
+        :type path: Text
+        """
+        logging.info(f"::: Saving dataset object to {path}")
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, path: Text):
+        """Load dataset object
+
+        :param path: Path where to save
+        :type path: Text
+        """
+        logging.info(f"::: Loading dataset object to {path}")
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
     def __call__(self, training: bool):
         """Download, split and create the TF.Dataset ready for training"""
         # 1. Download
-        print("::: Downloading data...")
+        logging.info("::: Downloading data...")
         self.download()
         # 2. Load
-        print("::: Loading data...")
-        data = self.load(training)
-        # 3. Whiten or not
-        if self.config.DATA_CONFIG.whiten.apply:
-            print("::: Whitening data...")
-            data = self.whiten(data, self.config.DATA_CONFIG.whiten.n_components)
-
+        logging.info("::: Loading data...")
+        data = self.load_data(training)
         if training:
-            # 4. Split dataset
-            print("::: Split data...")
+            # 3. Split dataset
+            logging.info("::: Split data...")
             train, val = self.split_dataset(data)
+            # 4. Whiten or not
+            if self.config.DATA_CONFIG.whiten.apply:
+                logging.info("::: Whitening data...")
+                train = self.whiten(
+                    train, self.config.DATA_CONFIG.whiten.n_components, True
+                )
+                val = self.whiten(
+                    val, self.config.DATA_CONFIG.whiten.n_components, False
+                )
+            else:
+                train = train[self.to_keep]
+                val = val[self.to_keep]
             # 5. Calcualte vocab and stats
-            print("::: Build stats and vocab...")
+            logging.info("::: Build stats and vocab...")
             vocab = self.__build_vocab_and_stats(train)
             # 6. Transform to tf dataset
-            print("::: Transforming from pandas to tensorflow...")
+            logging.info("::: Transforming from pandas to tensorflow...")
             train_dataset = self.pandas_to_tensorflow(train)
             val_dataset = self.pandas_to_tensorflow(val)
             # 7. Prepare tf dataset for training (batch, shuffle...)
-            print("::: Prepare data for training...")
+            logging.info("::: Prepare data for training...")
             train_dataset = self.preprare_data(train_dataset, shuffle=True)
             val_dataset = self.preprare_data(val_dataset, shuffle=False)
             return train_dataset, val_dataset, vocab
         else:
+            if self.config.DATA_CONFIG.whiten.apply:
+                data = self.whiten(
+                    data, self.config.DATA_CONFIG.whiten.n_components, False
+                )
+            else:
+                data = data[self.to_keep]
             dataset = self.pandas_to_tensorflow(data)
             dataset = self.preprare_data(dataset, shuffle=False)
             return dataset, data

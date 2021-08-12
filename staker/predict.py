@@ -20,7 +20,7 @@ def main(config: BaseSettings) -> NoReturn:
         custom_objects={"coeff_determination": coeff_determination, "rmse": rmse},
     )
     # 2. Load tournament dataset
-    dataset_getter = NumerAIDataset(config)
+    dataset_getter = NumerAIDataset.load("./models/dataset.pickle")
     dataset, df = dataset_getter(training=False)
     # 3. Predict
     df["prediction"] = model.predict(dataset)

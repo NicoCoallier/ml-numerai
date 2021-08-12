@@ -41,6 +41,8 @@ def main(config: BaseSettings) -> NoReturn:
     )
     # 4. Save model
     model_instance.save("./models/")
+    # 5. Save dataset object
+    dataset_getter.save("./models/dataset.pickle")
 
 
 if __name__ == "__main__":
