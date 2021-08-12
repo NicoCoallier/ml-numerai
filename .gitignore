@@ -10,6 +10,9 @@ current_round/
 *.so
 keys
 *.zip
+ckpt.*
+checkpoint
+*.pickle
 
 # Distribution / packaging
 logs/
