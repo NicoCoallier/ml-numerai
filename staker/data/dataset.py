@@ -27,7 +27,7 @@ class NumerAIDataset:
         self.config = config
         self.__get_env_var()
         self.napi = numerapi.NumerAPI(self.api_id, self.api_secret)
-        self.categ_features: List[Text] = []
+        self.categ_features: List[Text] = ["id"]
         self.num_features: List[Text] = []
         self.target_features: List[Text] = []
         self.new_num_features: List[Text] = []
