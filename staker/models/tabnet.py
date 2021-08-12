@@ -1,12 +1,16 @@
-import tensorflow as tf
-from staker.models.base import TFInputBuilder
-from typing import List, Text, Tuple
+from typing import List
+from typing import Tuple
 
-from staker.models.layers import FeatureTransformer, AttentiveTransformer
+import tensorflow as tf
+
+from staker.models.base import TFInputBuilder
+from staker.models.layers import AttentiveTransformer
+from staker.models.layers import FeatureTransformer
+
 
 class TabNet(TFInputBuilder):
-    """TabNet implementation for numerAI competition
-    """
+    """TabNet implementation for numerAI competition"""
+
     def __init__(
         self,
         config,
@@ -39,13 +43,14 @@ class TabNet(TFInputBuilder):
         # Build input and preprocessing layers
         self.build_input_layers()
         self.concat = tf.keras.layers.Concatenate()
-        # ? Switch to Ghost Batch Normalization
         self.bn = tf.keras.layers.BatchNormalization(
-            momentum=self.tabnet_config.bn_momentum, epsilon=self.tabnet_config.bn_epsilon
+            momentum=self.tabnet_config.bn_momentum,
+            epsilon=self.tabnet_config.bn_epsilon,
         )
         # Argument for sublayers
         kargs = {
-            "feature_dim": self.tabnet_config.feature_dim + self.tabnet_config.output_dim,
+            "feature_dim": self.tabnet_config.feature_dim
+            + self.tabnet_config.output_dim,
             "n_total": self.tabnet_config.n_total,
             "n_shared": self.tabnet_config.n_shared,
             "bn_momentum": self.tabnet_config.bn_momentum,
@@ -62,11 +67,17 @@ class TabNet(TFInputBuilder):
                 FeatureTransformer(**kargs, fcs=self.feature_transforms[0].shared_fcs)
             )
             self.attentive_transforms.append(
-                AttentiveTransformer(self.num_features, self.tabnet_config.bn_momentum, self.tabnet_config.bn_virtual_divider)
+                AttentiveTransformer(
+                    self.num_features,
+                    self.tabnet_config.bn_momentum,
+                    self.tabnet_config.bn_virtual_divider,
+                )
             )
         # Output layer
         self.dropout = tf.keras.layers.Dropout(0.1)
-        self.output_layer = tf.keras.layers.Dense(1, activation="sigmoid", use_bias=False)
+        self.output_layer = tf.keras.layers.Dense(
+            1, activation="sigmoid", use_bias=False
+        )
 
     def call(
         self, features: tf.Tensor, training: bool = None, alpha: float = 0.0
@@ -109,6 +120,7 @@ class TabNet(TFInputBuilder):
                 masked_features = tf.multiply(mask_values, features)
 
                 # entropy is used to penalize the amount of sparsity in feature selection
+                # Validate not missing a + here
                 total_entropy = tf.reduce_mean(
                     tf.reduce_sum(
                         tf.multiply(mask_values, tf.math.log(mask_values + 1e-15)),
@@ -120,7 +132,7 @@ class TabNet(TFInputBuilder):
 
         loss = total_entropy / self.tabnet_config.n_step
 
-        # Output layers
+        # Output layers | Here will go DA too
         out = self.dropout(out_agg, training=training)
         yhat = self.output_layer(out, training=training)
 
