@@ -1,6 +1,14 @@
 import os
+import pickle
+
+from typing import Dict
+from typing import List
+from typing import NoReturn
+from typing import Text
+from typing import Tuple
+
 import tensorflow as tf
-from typing import Dict, NoReturn, Text, List, Tuple
+
 from tensorflow.keras.layers.experimental import preprocessing
 
 
@@ -8,6 +16,7 @@ class TFInputBuilder(tf.keras.models.Model):
     """Base class in order to build diverse model
     architecture easily. Build the input graph
     """
+
     def build_input_layers(self) -> NoReturn:
         """Build input layers, preprocessing layer and embedding
         which make the output of this ready to be ingested by any layer.
@@ -64,7 +73,9 @@ class TFInputBuilder(tf.keras.models.Model):
                     ),
                 }
 
-    def encode_inputs(self, inputs:Dict[Text,tf.Tensor]) -> Tuple[List[tf.Tensor],List[tf.Tensor]]:
+    def encode_inputs(
+        self, inputs: Dict[Text, tf.Tensor]
+    ) -> Tuple[List[tf.Tensor], List[tf.Tensor]]:
         """Make the graph for input layers
 
         :param inputs: Input dict
@@ -91,7 +102,9 @@ class TFInputBuilder(tf.keras.models.Model):
                     )
                 elif value.__class__.__name__ == "NumFeature":
                     if not self.config.DATA_CONFIG.whiten.apply:
-                        num.append(self.preprocess_layers[name]["preprocess"](inputs[name]))
+                        num.append(
+                            self.preprocess_layers[name]["preprocess"](inputs[name])
+                        )
                     else:
                         pass
                 else:
