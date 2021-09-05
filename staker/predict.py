@@ -2,6 +2,8 @@ import logging
 
 from typing import NoReturn
 
+import numerapi as napi
+
 from pydantic import BaseSettings
 from staker.configs.main import numeraiconfig
 from staker.data.dataset import NumerAIDataset
@@ -32,6 +34,8 @@ def main(config: BaseSettings) -> NoReturn:
     # 4. Save predictions
     logging.info("::: Saving predictions")
     df[["id", "prediction"]].to_csv("./predictions.csv", index=False)
+    # 5. Upload to NumerAI
+    napi.upload_predictions("predictions.csv", model_id="SNOWBALLB")
 
 
 if __name__ == "__main__":

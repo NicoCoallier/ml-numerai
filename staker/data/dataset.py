@@ -35,19 +35,19 @@ class NumerAIDataset:
 
     def __get_features(self) -> NoReturn:
         """Get the feature/target uses in the model"""
-        self.to_keep: List[Text] = []
+        self.to_keep: List[Text] = ["id"]
         for feature, value in self.config.FEATURES_CONFIG.__dict__.items():
             if value.include:
                 self.to_keep.append(feature)
-            # Gather them by type
-            if value.__class__.__name__ == "CategFeature":
-                self.categ_features.append(feature)
-            elif value.__class__.__name__ == "NumFeature":
-                self.num_features.append(feature)
-            elif value.__class__.__name__ == "TargetFeature":
-                self.target_features.append(feature)
-            else:
-                pass
+                # Gather them by type
+                if value.__class__.__name__ == "CategFeature":
+                    self.categ_features.append(feature)
+                elif value.__class__.__name__ == "NumFeature":
+                    self.num_features.append(feature)
+                elif value.__class__.__name__ == "TargetFeature":
+                    self.target_features.append(feature)
+                else:
+                    pass
 
     def __get_env_var(self) -> NoReturn:
         """Instantiate env var"""

@@ -61,11 +61,13 @@ class NumFeature(BaseModel):
     dtype: Text = "float32"
     default: Any = -1
 
+
 class MLPConfig(BaseModel):
-    """MLP Config
-    """
+    """MLP Config"""
+
     name: Text = "mlp"
     dropout: float = 0.15
+
 
 class TabNetConfig(BaseModel):
     """TabNet config
@@ -80,10 +82,11 @@ class TabNetConfig(BaseModel):
     :param bn_momentum: Batch normalization, momentum. Defaults to 0.7.
     :param bn_virtual_divider: Batch normalization. Full batch will be divided by this.
     """
+
     name: Text = "tabnet"
     feature_dim: int
     output_dim: int
-    n_step: int = 1
+    n_step: int = 2
     n_total: int = 4
     n_shared: int = 2
     sparsity_coefficient: float = 1e-5
@@ -91,6 +94,7 @@ class TabNetConfig(BaseModel):
     bn_epsilon: float = 1e-5
     bn_momentum: float = 0.7
     bn_virtual_divider: int = 1
+
 
 class ModelConfig(BaseModel):
     """Model configuration
@@ -102,21 +106,23 @@ class ModelConfig(BaseModel):
     """
 
     type: BaseModel
-    reduce_on_plateau: bool = False
+    reduce_on_plateau: bool = True
     lr_scheduler: bool = True
     early: bool = True
     tensorboard: bool = False
     max_epochs: int = 500
     learning_rate: float = 1e-3
     optimizer_type: Text = "adam"
-    loss: Text = "rmse"
+    loss: Text = "mse"
     da: DomainAdaptation = DomainAdaptation()
 
+
 class WhitenConfig(BaseModel):
-    """Whiten configuration
-    """
+    """Whiten configuration"""
+
     apply: bool = True
-    n_components:int = 220
+    n_components: int = 220
+
 
 class DataConfig(BaseModel):
     """Data configuration
@@ -126,7 +132,7 @@ class DataConfig(BaseModel):
 
     type: Text
     batch_size: int = 32
-    whiten:WhitenConfig = WhitenConfig()
+    whiten: WhitenConfig = WhitenConfig()
 
 
 class FeaturesConfig(BaseModel):
@@ -470,4 +476,4 @@ class NumerAIFeaturesConfig(FeaturesConfig):
     feature_wisdom44: NumFeature = NumFeature()
     feature_wisdom45: NumFeature = NumFeature()
     feature_wisdom46: NumFeature = NumFeature()
-    era: CategFeature = CategFeature(embedding_size=12)
+    era: CategFeature = CategFeature(include=True, embedding_size=64)

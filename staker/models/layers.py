@@ -119,12 +119,14 @@ class FeatureBlock(tf.keras.Model):
         self.bn = GhostBatchNormalization(
             virtual_divider=bn_virtual_divider, momentum=bn_momentum
         )
+        self.dropout = tf.keras.layers.Dropout(0.55)
 
     def call(self, x, training: bool = None, alpha: float = 0.0):
         x = self.fc(x)
         x = self.bn(x, training=training, alpha=alpha)
         if self.apply_glu:
             return glu(x, self.feature_dim)
+        x = self.dropout(x)
         return x
 
 

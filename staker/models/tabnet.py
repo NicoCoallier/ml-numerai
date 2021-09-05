@@ -80,8 +80,9 @@ class TabNet(TFInputBuilder):
                     )
                 )
             # Output layer
-            self.dropout = tf.keras.layers.Dropout(0.1)
+            self.dropout = tf.keras.layers.Dropout(0.55)
             # Sigmoid because output is between 0 and 1
+            self.dense1 = tf.keras.layers.Dense(128, activation="relu")
             self.output_layer = tf.keras.layers.Dense(
                 1, activation="sigmoid", use_bias=False
             )
@@ -141,6 +142,7 @@ class TabNet(TFInputBuilder):
 
         # Output layers | Here will go DA too
         out = self.dropout(out_agg, training=training)
+        out = self.dense1(out)
         yhat = self.output_layer(out, training=training)
 
         # Loss
